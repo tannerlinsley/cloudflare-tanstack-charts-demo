@@ -110,7 +110,7 @@ export function securityActivityDefinition(
       margin: { top: 10, right: 12, bottom: 28, left: 54 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>
@@ -332,7 +332,7 @@ export function gatewayRequestsDefinition(provider: GatewayProvider | 'All') {
       margin: { top: 10, right: 12, bottom: 28, left: 50 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>
