@@ -223,7 +223,7 @@ export function workerQuantileDefinition(metric: 'CPU' | 'Wall') {
       margin: { top: 12, right: 10, bottom: 28, left: 52 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>
@@ -389,7 +389,7 @@ export function gatewayTokensDefinition(provider: GatewayProvider | 'All') {
       margin: { top: 10, right: 12, bottom: 28, left: 58 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>

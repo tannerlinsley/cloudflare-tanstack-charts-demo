@@ -1,5 +1,6 @@
 import countriesAtlasJson from 'world-atlas/countries-110m.json'
 import { areaY, createMark, defineChart, lineY } from '@tanstack/charts'
+import { decorative } from '@tanstack/charts/mark/decorative'
 import { geoShape } from '@tanstack/charts/geo'
 import { pie, polar, radialArc } from '@tanstack/charts/polar'
 import { tooltip } from '@tanstack/charts/tooltip'
@@ -134,12 +135,14 @@ export function sparklineDefinition(
 ) {
   return defineChart({
     marks: [
-      areaY(data, {
-        x: 'time',
-        y: 'value',
-        fill: color,
-        fillOpacity: 0.14,
-      }),
+      decorative(
+        areaY(data, {
+          x: 'time',
+          y: 'value',
+          fill: color,
+          fillOpacity: 0.14,
+        }),
+      ),
       lineY(data, {
         x: 'time',
         y: 'value',
@@ -223,7 +226,7 @@ export function dashboardTrafficDefinition({
       margin: { top: 10, right: 14, bottom: 27, left: 54 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>
@@ -358,7 +361,7 @@ export function radarTrafficDefinition(visibility: RadarSeriesVisibility) {
       margin: { top: 10, right: 14, bottom: 27, left: 42 },
     },
     {
-      focus: 'group-x',
+      focus: 'nearest',
       tooltip: {
         use: tooltip,
         format: (point) =>
