@@ -1,4 +1,5 @@
 import { areaY, barY, createMark, defineChart, lineY } from '@tanstack/charts'
+import { decorative } from '@tanstack/charts/mark/decorative'
 import { pie, polar, radialArc } from '@tanstack/charts/polar'
 import { tooltip } from '@tanstack/charts/tooltip'
 import { scaleBand, scaleLinear, scaleOrdinal, scaleUtc } from 'd3-scale'
@@ -73,13 +74,15 @@ export function securityActivityDefinition(
     (series) =>
       visibility[series]
         ? [
-            areaY(securityRows[series], {
-              id: `${series} area`,
-              x: 'time',
-              y: 'value',
-              fill: colors[series],
-              fillOpacity: 0.07,
-            }),
+            decorative(
+              areaY(securityRows[series], {
+                id: `${series} area`,
+                x: 'time',
+                y: 'value',
+                fill: colors[series],
+                fillOpacity: 0.07,
+              }),
+            ),
             lineY(securityRows[series], {
               id: series,
               x: 'time',
@@ -299,13 +302,15 @@ export function gatewayRequestsDefinition(provider: GatewayProvider | 'All') {
   return defineChart(
     {
       marks: providers.flatMap((item) => [
-        areaY(gatewayRows[item], {
-          id: `${item} area`,
-          x: 'time',
-          y: 'value',
-          fill: colors[item],
-          fillOpacity: 0.07,
-        }),
+        decorative(
+          areaY(gatewayRows[item], {
+            id: `${item} area`,
+            x: 'time',
+            y: 'value',
+            fill: colors[item],
+            fillOpacity: 0.07,
+          }),
+        ),
         lineY(gatewayRows[item], {
           id: item,
           x: 'time',
