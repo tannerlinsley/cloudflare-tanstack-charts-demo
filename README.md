@@ -2,6 +2,8 @@
 
 A high-fidelity, interactive reproduction of Cloudflare visualization surfaces implemented with [TanStack Charts](https://github.com/TanStack/charts).
 
+**[Open the live demo](https://cloudflare-tanstack-charts-demo.thetanstack.workers.dev)**
+
 The demo includes:
 
 - Custom Dashboard traffic analytics
