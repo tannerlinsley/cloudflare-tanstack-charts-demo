@@ -1,0 +1,40 @@
+{
+  "name": "cloudflare-tanstack-charts-demo",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "wrangler types --check && tsc --noEmit",
+    "check": "npm run typecheck && npm run build && wrangler deploy --dry-run",
+    "cf-typegen": "wrangler types",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@tanstack/charts": "0.9.0",
+    "d3-geo": "3.1.1",
+    "d3-scale": "4.0.2",
+    "d3-shape": "3.2.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "topojson-client": "3.1.0",
+    "world-atlas": "2.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260812.1",
+    "@types/d3-geo": "^3.1.0",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.1.8",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/topojson-client": "3.1.5",
+    "@vitejs/plugin-react": "6.0.5",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "wrangler": "4.122.0"
+  }
+}
