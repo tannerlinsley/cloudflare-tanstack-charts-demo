@@ -58,6 +58,13 @@ export interface RadarSeriesVisibility {
 
 export type TrafficViewportWindow = ZoomXWindow<Date>
 
+export interface TrafficViewportPresentation {
+  readonly domain: TrafficViewportWindow
+  /** Transient horizontal displacement measured in visible window widths. */
+  readonly translate: number
+  readonly direct: boolean
+}
+
 const dashboardBlue = '#0051c3'
 const radarBlue = '#0055b8'
 const radarCyan = '#00a7c7'
@@ -279,35 +286,59 @@ export function dashboardTrafficDefinition({
 
 export function viewportTrafficDefinition(
   window: TrafficViewportWindow,
+  presentation: TrafficViewportPresentation,
   onChange: (window: TrafficViewportWindow, reason: ZoomXChange<Date>) => void,
   onActiveChange?: (active: boolean) => void,
 ) {
-  const rows = rowsForViewport(viewportTrafficRows, window)
+  const rows = rowsForViewport(viewportTrafficRows, presentation.domain)
   const yDomain = paddedValueDomain(rows)
 
   return defineChart({
-    marks: [
-      lineY(rows, {
-        id: 'viewport-requests',
-        x: 'time',
-        y: 'value',
-        stroke: dashboardBlue,
-        strokeWidth: 2,
-      }),
-    ],
-    x: {
-      scale: scaleUtc().domain([window.start, window.end]),
-      axis: {
-        ticks: { count: 7, format: viewportAxisFormat },
-        tickLabels: { thin: { minGap: 8, priority: 'ends' } },
+    chart: ({ width }) => ({
+      motion: {
+        path: {
+          update: 'rolling',
+          x: 'shift',
+          y: 'reproject',
+          fallback: 'snap',
+        },
+        ...(presentation.direct
+          ? { transition: { type: 'tween' as const, duration: 0 } }
+          : {}),
       },
-    },
-    y: {
-      scale: scaleLinear().domain(yDomain),
-      nice: 4,
-      grid: true,
-      axis: { ticks: { count: 5, format: compact } },
-    },
+      marks: [
+        lineY(viewportTrafficRows, {
+          id: 'viewport-requests',
+          x: 'time',
+          y: 'value',
+          key: (row) => row.time.getTime(),
+          stroke: dashboardBlue,
+          strokeWidth: 2,
+        }),
+      ],
+      x: {
+        scale: scaleUtc().domain([
+          presentation.domain.start,
+          presentation.domain.end,
+        ]),
+        viewport: {
+          domain: [presentation.domain.start, presentation.domain.end],
+          translate: presentation.translate * Math.max(0, width - 58 - 16),
+        },
+        axis: {
+          ticks: { count: 7, format: viewportAxisFormat },
+          tickLabels: { thin: { minGap: 8, priority: 'ends' } },
+        },
+      },
+      y: {
+        scale: scaleLinear().domain(yDomain),
+        nice: 4,
+        grid: true,
+        axis: { ticks: { count: 5, format: compact } },
+      },
+      clip: true,
+      margin: { top: 16, right: 16, bottom: 30, left: 58 },
+    }),
     controls: [
       zoomX({
         id: 'request-viewport',
@@ -327,7 +358,6 @@ export function viewportTrafficDefinition(
     focus: false,
     keyboard: false,
     focusRing: false,
-    margin: { top: 16, right: 16, bottom: 30, left: 58 },
   })
 }
 

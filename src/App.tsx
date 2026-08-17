@@ -489,18 +489,47 @@ function DashboardTimeseries({
 }
 
 function ViewportDemo() {
-  const [window, setWindow] = React.useState<TrafficViewportWindow>(() =>
-    copyTrafficWindow(viewportInitialWindow),
-  )
+  const [viewport, setViewport] = React.useState(() => {
+    const window = copyTrafficWindow(viewportInitialWindow)
+    return {
+      window,
+      presentation: {
+        domain: copyTrafficWindow(window),
+        translate: 0,
+        direct: false,
+      },
+    }
+  })
   const [active, setActive] = React.useState(false)
   const [lastInteraction, setLastInteraction] = React.useState('Ready')
+  const { window, presentation } = viewport
 
   const detailChart = React.useMemo(
     () =>
       viewportTrafficDefinition(
         window,
+        presentation,
         (next, reason) => {
-          setWindow(copyTrafficWindow(next))
+          const accepted = normalizeTrafficWindow(next)
+          const translate =
+            reason.type === 'preview' && reason.action === 'pan'
+              ? trafficWindowTranslation(reason.origin, accepted)
+              : undefined
+          setViewport({
+            window: accepted,
+            presentation:
+              translate === undefined
+                ? {
+                    domain: copyTrafficWindow(accepted),
+                    translate: 0,
+                    direct: reason.type === 'preview',
+                  }
+                : {
+                    domain: copyTrafficWindow(reason.origin),
+                    translate,
+                    direct: true,
+                  },
+          })
           setLastInteraction(
             reason.type === 'cancel'
               ? 'Change cancelled'
@@ -513,14 +542,33 @@ function ViewportDemo() {
         },
         setActive,
       ),
-    [window],
+    [presentation, window],
   )
 
   const overviewChart = React.useMemo(
     () =>
       viewportScrubberDefinition(window, (next, reason) => {
         if (next.start.getTime() === next.end.getTime()) return
-        setWindow(normalizeTrafficWindow(next))
+        const accepted = normalizeTrafficWindow(next)
+        const translate =
+          reason.type === 'preview' && reason.target === 'selection'
+            ? trafficWindowTranslation(reason.origin, accepted)
+            : undefined
+        setViewport({
+          window: accepted,
+          presentation:
+            translate === undefined
+              ? {
+                  domain: copyTrafficWindow(accepted),
+                  translate: 0,
+                  direct: reason.type === 'preview',
+                }
+              : {
+                  domain: copyTrafficWindow(reason.origin),
+                  translate,
+                  direct: true,
+                },
+        })
         setLastInteraction(
           reason.type === 'cancel'
             ? 'Change cancelled'
@@ -539,12 +587,30 @@ function ViewportDemo() {
     window.end.getTime() === viewportInitialWindow.end.getTime()
 
   const applySpan = (hours: number) => {
-    setWindow((current) => trafficWindowWithSpan(current, hours))
+    setViewport((current) => {
+      const window = trafficWindowWithSpan(current.window, hours)
+      return {
+        window,
+        presentation: {
+          domain: copyTrafficWindow(window),
+          translate: 0,
+          direct: false,
+        },
+      }
+    })
     setLastInteraction(`${formatDuration(hours)} window`)
   }
 
   const reset = () => {
-    setWindow(copyTrafficWindow(viewportInitialWindow))
+    const window = copyTrafficWindow(viewportInitialWindow)
+    setViewport({
+      window,
+      presentation: {
+        domain: copyTrafficWindow(window),
+        translate: 0,
+        direct: false,
+      },
+    })
     setLastInteraction('Reset')
   }
 
@@ -1096,6 +1162,15 @@ function trafficWindowWithSpan(window: TrafficViewportWindow, hours: number) {
     start: new Date(center - span / 2),
     end: new Date(center + span / 2),
   })
+}
+
+function trafficWindowTranslation(
+  origin: Readonly<{ start: Date; end: Date }>,
+  next: Readonly<{ start: Date; end: Date }>,
+) {
+  const span = origin.end.getTime() - origin.start.getTime()
+  if (span <= 0) return 0
+  return (origin.start.getTime() - next.start.getTime()) / span
 }
 
 function formatTrafficRange(window: TrafficViewportWindow) {
