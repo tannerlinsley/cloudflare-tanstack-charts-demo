@@ -13,6 +13,7 @@ The demo includes:
 - Cloudflare Radar traffic and protocol compositions
 - A synchronized time-series viewport with plot panning, wheel zoom, overview
   scrubbing, range resizing, presets, and reset
+- Default spring motion across all 18 chart hosts, with reduced-motion support
 
 All account names, domains, metrics, IP addresses, events, and deployments are deterministic synthetic fixtures. This project is not an official Cloudflare product.
 

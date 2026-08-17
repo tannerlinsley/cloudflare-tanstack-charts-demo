@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Chart as CanvasChart } from '@tanstack/charts/react/canvas'
 import {
   bandwidthSeries,
   cacheSeries,
@@ -20,6 +19,7 @@ import {
   type TrafficViewportWindow,
 } from './charts'
 import { ProductSurface, type ProductScreen } from './ProductScreens'
+import { SpringChart } from './SpringChart'
 
 type Surface = 'dashboard' | ProductScreen | 'radar' | 'viewport'
 type TimeRange = 1 | 7
@@ -476,7 +476,7 @@ function DashboardTimeseries({
         <strong>182.4M</strong>
       </div>
       <div className="chart-frame chart-frame--dashboard">
-        <CanvasChart
+        <SpringChart
           definition={chart}
           height={326}
           initialWidth={1080}
@@ -596,7 +596,7 @@ function ViewportDemo() {
           </span>
         </header>
         <div className="chart-frame viewport-main-chart">
-          <CanvasChart
+          <SpringChart
             definition={detailChart}
             height={360}
             initialWidth={1080}
@@ -610,7 +610,7 @@ function ViewportDemo() {
           <span>Drag the selection to scrub. Drag either edge to resize.</span>
         </div>
         <div className="chart-frame viewport-overview-chart">
-          <CanvasChart
+          <SpringChart
             definition={overviewChart}
             height={125}
             initialWidth={1080}
@@ -692,7 +692,7 @@ function CountryContract() {
       />
       <div className="country-contract">
         <div className="globe-wrap">
-          <CanvasChart
+          <SpringChart
             definition={countryGlobeDefinition}
             height={320}
             initialWidth={560}
@@ -817,7 +817,9 @@ function Radar() {
               <div className="menu__popover menu__popover--compact">
                 <button
                   type="button"
-                  onClick={() => downloadChart(chartRef.current, setNotice)}
+                  onClick={() =>
+                    void downloadChart(chartRef.current, setNotice)
+                  }
                 >
                   Download PNG
                 </button>
@@ -867,7 +869,7 @@ function Radar() {
               />
             </div>
             <div className="chart-frame chart-frame--radar">
-              <CanvasChart
+              <SpringChart
                 definition={radarChart}
                 height={305}
                 initialWidth={760}
@@ -887,7 +889,7 @@ function Radar() {
                 <i className="protocol-other" /> Other <strong>26.8%</strong>
               </span>
             </div>
-            <CanvasChart
+            <SpringChart
               definition={protocolGauge}
               height={190}
               initialWidth={300}
@@ -1014,7 +1016,7 @@ function MetricCard({
         <strong>{value}</strong>
         <span>↑ {change}</span>
       </div>
-      <CanvasChart
+      <SpringChart
         definition={definition}
         height={62}
         initialWidth={280}
@@ -1118,18 +1120,63 @@ async function copyLink(setNotice: (value: string) => void) {
   }
 }
 
-function downloadChart(
+async function downloadChart(
   container: HTMLDivElement | null,
   setNotice: (value: string) => void,
 ) {
-  const canvas = container?.querySelector('canvas')
-  if (!canvas) {
+  const svg = container?.querySelector<SVGSVGElement>('.ts-chart-surface svg')
+  if (!svg) {
     setNotice('Chart image is not available')
     return
   }
-  const link = document.createElement('a')
-  link.download = 'cloudflare-radar-traffic.png'
-  link.href = canvas.toDataURL('image/png')
-  link.click()
-  setNotice('Chart downloaded')
+
+  const bounds = svg.getBoundingClientRect()
+  const width = Math.max(1, Math.round(bounds.width))
+  const height = Math.max(1, Math.round(bounds.height))
+  const source = new Blob([new XMLSerializer().serializeToString(svg)], {
+    type: 'image/svg+xml;charset=utf-8',
+  })
+  const sourceUrl = URL.createObjectURL(source)
+
+  try {
+    const image = await loadImage(sourceUrl)
+    const scale = Math.max(2, window.devicePixelRatio)
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(width * scale)
+    canvas.height = Math.round(height * scale)
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Canvas is unavailable')
+    context.scale(scale, scale)
+    context.drawImage(image, 0, 0, width, height)
+
+    const png = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) =>
+          blob ? resolve(blob) : reject(new Error('PNG encoding failed')),
+        'image/png',
+      )
+    })
+    const downloadUrl = URL.createObjectURL(png)
+    const link = document.createElement('a')
+    link.download = 'cloudflare-radar-traffic.png'
+    link.href = downloadUrl
+    link.click()
+    URL.revokeObjectURL(downloadUrl)
+    setNotice('Chart downloaded')
+  } catch {
+    setNotice('Chart image is not available')
+  } finally {
+    URL.revokeObjectURL(sourceUrl)
+  }
+}
+
+function loadImage(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.addEventListener('load', () => resolve(image), { once: true })
+    image.addEventListener('error', () => reject(new Error('Image failed')), {
+      once: true,
+    })
+    image.src = source
+  })
 }

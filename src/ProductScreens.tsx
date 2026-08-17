@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Chart as CanvasChart } from '@tanstack/charts/react/canvas'
 import {
   attackScoreBuckets,
   botScoreBuckets,
@@ -17,6 +16,7 @@ import {
   type SecurityTraffic,
 } from './productCharts'
 import { sparklineDefinition } from './charts'
+import { SpringChart } from './SpringChart'
 
 export type ProductScreen = 'security' | 'workers' | 'ai-gateway'
 
@@ -151,7 +151,7 @@ function SecurityAnalytics() {
           ))}
         </div>
         <div className="product-chart product-chart--activity">
-          <CanvasChart
+          <SpringChart
             definition={activity}
             height={310}
             initialWidth={1080}
@@ -322,7 +322,7 @@ function WorkersAnalytics() {
           action={<button type="button">Manage bindings</button>}
         />
         <div className="topology-chart">
-          <CanvasChart
+          <SpringChart
             definition={workerTopology}
             height={300}
             initialWidth={1100}
@@ -392,7 +392,7 @@ function WorkersAnalytics() {
           />
           <QuantileLegend />
           <div className="product-chart">
-            <CanvasChart
+            <SpringChart
               definition={quantiles}
               height={310}
               initialWidth={800}
@@ -407,7 +407,7 @@ function WorkersAnalytics() {
             description="7.04M total"
           />
           <div className="donut-wrap">
-            <CanvasChart
+            <SpringChart
               definition={workerStatus}
               height={205}
               initialWidth={260}
@@ -433,7 +433,7 @@ function WorkersAnalytics() {
             title="Request duration"
             description="Invocations grouped by duration bucket"
           />
-          <CanvasChart
+          <SpringChart
             definition={workerHistogram}
             height={270}
             initialWidth={560}
@@ -564,7 +564,7 @@ function AiGatewayAnalytics() {
             action={<button type="button">•••</button>}
           />
           <GatewayLegend provider={provider} />
-          <CanvasChart
+          <SpringChart
             definition={requestChart}
             height={290}
             initialWidth={600}
@@ -578,7 +578,7 @@ function AiGatewayAnalytics() {
             action={<button type="button">•••</button>}
           />
           <GatewayLegend provider={provider} />
-          <CanvasChart
+          <SpringChart
             definition={tokenChart}
             height={290}
             initialWidth={600}
@@ -593,7 +593,7 @@ function AiGatewayAnalytics() {
             title="Cost by model"
             description="Estimated provider cost in USD"
           />
-          <CanvasChart
+          <SpringChart
             definition={gatewayCost}
             height={280}
             initialWidth={560}
@@ -606,7 +606,7 @@ function AiGatewayAnalytics() {
             description="Semantic and exact cache matches"
           />
           <div className="donut-wrap">
-            <CanvasChart
+            <SpringChart
               definition={gatewayCache}
               height={190}
               initialWidth={260}
@@ -813,7 +813,7 @@ function ScorePanel({
         description={description}
         action={<button type="button">?</button>}
       />
-      <CanvasChart
+      <SpringChart
         definition={definition}
         height={240}
         initialWidth={560}
@@ -859,7 +859,7 @@ function WorkerMetric({
         <strong>{value}</strong>
         <small data-danger={danger || undefined}>{detail}</small>
       </div>
-      <CanvasChart
+      <SpringChart
         definition={definition}
         height={76}
         initialWidth={360}

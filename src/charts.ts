@@ -327,7 +327,6 @@ export function viewportTrafficDefinition(
     focus: false,
     keyboard: false,
     focusRing: false,
-    svgAnimation: false,
     margin: { top: 16, right: 16, bottom: 30, left: 58 },
   })
 }
@@ -393,7 +392,6 @@ export function viewportScrubberDefinition(
     focus: false,
     keyboard: false,
     focusRing: false,
-    svgAnimation: false,
     margin: { top: 5, right: 16, bottom: 25, left: 58 },
   })
 }
