@@ -522,7 +522,7 @@ function ViewportDemo() {
                 ? {
                     domain: copyTrafficWindow(accepted),
                     translate: 0,
-                    direct: reason.type === 'preview',
+                    direct: true,
                   }
                 : {
                     domain: copyTrafficWindow(reason.origin),
@@ -561,7 +561,7 @@ function ViewportDemo() {
               ? {
                   domain: copyTrafficWindow(accepted),
                   translate: 0,
-                  direct: reason.type === 'preview',
+                  direct: true,
                 }
               : {
                   domain: copyTrafficWindow(reason.origin),
