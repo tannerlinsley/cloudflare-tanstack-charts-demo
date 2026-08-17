@@ -510,25 +510,15 @@ function ViewportDemo() {
         window,
         presentation,
         (next, reason) => {
-          const accepted = normalizeTrafficWindow(next)
-          const translate =
-            reason.type === 'preview' && reason.action === 'pan'
-              ? trafficWindowTranslation(reason.origin, accepted)
-              : undefined
+          const accepted =
+            reason.type === 'preview' ? next : normalizeTrafficWindow(next)
           setViewport({
             window: accepted,
-            presentation:
-              translate === undefined
-                ? {
-                    domain: copyTrafficWindow(accepted),
-                    translate: 0,
-                    direct: true,
-                  }
-                : {
-                    domain: copyTrafficWindow(reason.origin),
-                    translate,
-                    direct: true,
-                  },
+            presentation: {
+              domain: copyTrafficWindow(accepted),
+              translate: 0,
+              direct: true,
+            },
           })
           setLastInteraction(
             reason.type === 'cancel'
@@ -549,7 +539,8 @@ function ViewportDemo() {
     () =>
       viewportScrubberDefinition(window, (next, reason) => {
         if (next.start.getTime() === next.end.getTime()) return
-        const accepted = normalizeTrafficWindow(next)
+        const accepted =
+          reason.type === 'preview' ? next : normalizeTrafficWindow(next)
         const translate =
           reason.type === 'preview' && reason.target === 'selection'
             ? trafficWindowTranslation(reason.origin, accepted)
