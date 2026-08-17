@@ -11,6 +11,8 @@ The demo includes:
 - Workers topology, runtime telemetry, quantiles, deployment annotations, and distributions
 - AI Gateway provider, token, cost, cache, and reliability analytics
 - Cloudflare Radar traffic and protocol compositions
+- A synchronized time-series viewport with plot panning, wheel zoom, overview
+  scrubbing, range resizing, presets, and reset
 
 All account names, domains, metrics, IP addresses, events, and deployments are deterministic synthetic fixtures. This project is not an official Cloudflare product.
 

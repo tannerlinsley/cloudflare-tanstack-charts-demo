@@ -11,12 +11,17 @@ import {
   sparklineDefinition,
   threatSeries,
   topCountries,
+  viewportFullExtent,
+  viewportInitialWindow,
+  viewportScrubberDefinition,
+  viewportTrafficDefinition,
   type DashboardInterval,
   type RadarSeriesVisibility,
+  type TrafficViewportWindow,
 } from './charts'
 import { ProductSurface, type ProductScreen } from './ProductScreens'
 
-type Surface = 'dashboard' | ProductScreen | 'radar'
+type Surface = 'dashboard' | ProductScreen | 'radar' | 'viewport'
 type TimeRange = 1 | 7
 
 const intervals: readonly DashboardInterval[] = [
@@ -49,6 +54,8 @@ export function App() {
             <Dashboard />
           ) : surface === 'radar' ? (
             <Radar />
+          ) : surface === 'viewport' ? (
+            <ViewportDemo />
           ) : (
             <ProductSurface screen={surface} />
           )}
@@ -105,6 +112,13 @@ function Sidebar({
         { label: 'Security' },
         { label: 'Outage Center' },
       ],
+      viewport: [
+        { label: 'Overview' },
+        { label: 'Traffic', active: true },
+        { label: 'Flows' },
+        { label: 'Routes' },
+        { label: 'Events' },
+      ],
     }
   const demoScreens: readonly { label: string; value: Surface }[] = [
     { label: 'Overview', value: 'dashboard' },
@@ -112,6 +126,7 @@ function Sidebar({
     { label: 'Workers', value: 'workers' },
     { label: 'AI Gateway', value: 'ai-gateway' },
     { label: 'Radar', value: 'radar' },
+    { label: 'Viewport', value: 'viewport' },
   ]
 
   return (
@@ -470,6 +485,140 @@ function DashboardTimeseries({
         />
       </div>
     </section>
+  )
+}
+
+function ViewportDemo() {
+  const [window, setWindow] = React.useState<TrafficViewportWindow>(() =>
+    copyTrafficWindow(viewportInitialWindow),
+  )
+  const [active, setActive] = React.useState(false)
+  const [lastInteraction, setLastInteraction] = React.useState('Ready')
+
+  const detailChart = React.useMemo(
+    () =>
+      viewportTrafficDefinition(
+        window,
+        (next, reason) => {
+          setWindow(copyTrafficWindow(next))
+          setLastInteraction(
+            reason.type === 'cancel'
+              ? 'Change cancelled'
+              : reason.action === 'zoom'
+                ? 'Zoomed'
+                : reason.action === 'reset'
+                  ? 'Reset'
+                  : 'Panned',
+          )
+        },
+        setActive,
+      ),
+    [window],
+  )
+
+  const overviewChart = React.useMemo(
+    () =>
+      viewportScrubberDefinition(window, (next, reason) => {
+        if (next.start.getTime() === next.end.getTime()) return
+        setWindow(normalizeTrafficWindow(next))
+        setLastInteraction(
+          reason.type === 'cancel'
+            ? 'Change cancelled'
+            : reason.target === 'selection'
+              ? 'Scrubbed'
+              : 'Range resized',
+        )
+      }),
+    [window],
+  )
+
+  const spanHours =
+    (window.end.getTime() - window.start.getTime()) / (60 * 60 * 1000)
+  const isInitial =
+    window.start.getTime() === viewportInitialWindow.start.getTime() &&
+    window.end.getTime() === viewportInitialWindow.end.getTime()
+
+  const applySpan = (hours: number) => {
+    setWindow((current) => trafficWindowWithSpan(current, hours))
+    setLastInteraction(`${formatDuration(hours)} window`)
+  }
+
+  const reset = () => {
+    setWindow(copyTrafficWindow(viewportInitialWindow))
+    setLastInteraction('Reset')
+  }
+
+  return (
+    <>
+      <div className="breadcrumbs">
+        Account / Analytics &amp; Logs / Network Analytics
+      </div>
+      <header className="page-heading">
+        <div>
+          <h1>Network Analytics</h1>
+          <p>Inspect request volume inside a controlled time window.</p>
+        </div>
+        <div className="toolbar toolbar--primary">
+          <button type="button" disabled={isInitial} onClick={reset}>
+            Reset window
+          </button>
+        </div>
+      </header>
+
+      <div className="viewport-controls" aria-label="Viewport controls">
+        <div className="viewport-range">
+          <span>Visible range</span>
+          <output aria-live="polite">{formatTrafficRange(window)}</output>
+          <small>{formatDuration(spanHours)}</small>
+        </div>
+        <div className="viewport-presets" aria-label="Set viewport duration">
+          {[1, 6, 24, 168].map((hours) => (
+            <button
+              type="button"
+              aria-pressed={Math.abs(spanHours - hours) < 0.02}
+              onClick={() => applySpan(hours)}
+              key={hours}
+            >
+              {formatDuration(hours)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section className="card viewport-card">
+        <header className="viewport-card__header">
+          <div>
+            <h2>Requests</h2>
+            <p>Drag the plot to pan. Focus it before scrolling to zoom.</p>
+          </div>
+          <span data-active={active || undefined}>
+            {active ? 'Pan and zoom active' : lastInteraction}
+          </span>
+        </header>
+        <div className="chart-frame viewport-main-chart">
+          <CanvasChart
+            definition={detailChart}
+            height={360}
+            initialWidth={1080}
+            ariaLabel="Zoomable request traffic viewport"
+            ariaDescription="A six-hour request window inside seven days of five-minute traffic samples. Drag to pan or focus and scroll to zoom."
+          />
+        </div>
+
+        <div className="viewport-overview__header">
+          <strong>Full 7-day range</strong>
+          <span>Drag the selection to scrub. Drag either edge to resize.</span>
+        </div>
+        <div className="chart-frame viewport-overview-chart">
+          <CanvasChart
+            definition={overviewChart}
+            height={125}
+            initialWidth={1080}
+            ariaLabel="Request traffic viewport scrubber"
+          />
+        </div>
+      </section>
+    </>
   )
 }
 
@@ -888,6 +1037,76 @@ function CardHeader({
       {aside}
     </header>
   )
+}
+
+const trafficRangeFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'UTC',
+})
+
+function copyTrafficWindow(
+  window: Readonly<{ start: Date; end: Date }>,
+): TrafficViewportWindow {
+  return {
+    start: new Date(window.start.getTime()),
+    end: new Date(window.end.getTime()),
+  }
+}
+
+function normalizeTrafficWindow(
+  window: Readonly<{ start: Date; end: Date }>,
+): TrafficViewportWindow {
+  const fullStart = viewportFullExtent[0].getTime()
+  const fullEnd = viewportFullExtent[1].getTime()
+  const minimumSpan = 60 * 60 * 1000
+  let start = Math.min(window.start.getTime(), window.end.getTime())
+  let end = Math.max(window.start.getTime(), window.end.getTime())
+
+  if (end - start < minimumSpan) {
+    const center = (start + end) / 2
+    start = center - minimumSpan / 2
+    end = center + minimumSpan / 2
+  }
+  if (start < fullStart) {
+    end += fullStart - start
+    start = fullStart
+  }
+  if (end > fullEnd) {
+    start -= end - fullEnd
+    end = fullEnd
+  }
+
+  return {
+    start: new Date(Math.max(fullStart, start)),
+    end: new Date(Math.min(fullEnd, end)),
+  }
+}
+
+function trafficWindowWithSpan(window: TrafficViewportWindow, hours: number) {
+  const fullSpan =
+    viewportFullExtent[1].getTime() - viewportFullExtent[0].getTime()
+  const span = Math.min(fullSpan, hours * 60 * 60 * 1000)
+  const center = (window.start.getTime() + window.end.getTime()) / 2
+  return normalizeTrafficWindow({
+    start: new Date(center - span / 2),
+    end: new Date(center + span / 2),
+  })
+}
+
+function formatTrafficRange(window: TrafficViewportWindow) {
+  return `${trafficRangeFormatter.format(window.start)} – ${trafficRangeFormatter.format(window.end)} UTC`
+}
+
+function formatDuration(hours: number) {
+  if (hours >= 24 && Math.abs(hours % 24) < 0.02) {
+    const days = Math.round(hours / 24)
+    return `${days} ${days === 1 ? 'day' : 'days'}`
+  }
+  const rounded = Number.isInteger(hours) ? hours : Number(hours.toFixed(1))
+  return `${rounded} ${rounded === 1 ? 'hour' : 'hours'}`
 }
 
 async function copyLink(setNotice: (value: string) => void) {

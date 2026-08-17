@@ -138,10 +138,6 @@ a {
   background: #f4f6f8;
 }
 
-.surface-switch button:last-child {
-  grid-column: 1 / -1;
-}
-
 .surface-switch button {
   padding: 6px 5px;
   border: 0;
@@ -475,6 +471,143 @@ a {
 .chart-frame {
   position: relative;
   min-width: 0;
+}
+
+.viewport-controls {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.viewport-range {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 3px 10px;
+  min-width: 0;
+}
+
+.viewport-range > span {
+  color: #6a727d;
+  font-size: 9px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.viewport-range output {
+  grid-column: 1;
+  color: #252a31;
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewport-range small {
+  grid-column: 2;
+  grid-row: 2;
+  color: #737b86;
+  font-size: 9px;
+}
+
+.viewport-presets {
+  display: flex;
+  padding: 2px;
+  border: 1px solid #ccd1d8;
+  border-radius: 4px;
+  background: #f5f6f8;
+}
+
+.viewport-presets button {
+  min-width: 58px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #5c6470;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.viewport-presets button[aria-pressed='true'] {
+  background: #fff;
+  color: #174ea6;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
+}
+
+.viewport-card {
+  padding: 15px 15px 10px;
+}
+
+.viewport-card__header,
+.viewport-overview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.viewport-card__header h2 {
+  margin: 0;
+  color: #272a2f;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.viewport-card__header p {
+  margin: 4px 0 0;
+  color: #6c7480;
+  font-size: 9px;
+}
+
+.viewport-card__header > span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #eef1f4;
+  color: #68717c;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.viewport-card__header > span[data-active='true'] {
+  background: #e8f2ff;
+  color: #1457ad;
+}
+
+.viewport-main-chart {
+  margin-top: 4px;
+}
+
+.viewport-main-chart [data-chart-zoom-surface] {
+  cursor: grab;
+}
+
+.viewport-main-chart [data-chart-zoom-surface]:active {
+  cursor: grabbing;
+}
+
+.viewport-overview__header {
+  align-items: baseline;
+  margin: 5px 0 0 58px;
+  padding-top: 10px;
+  border-top: 1px solid #eceef1;
+  color: #707884;
+  font-size: 9px;
+}
+
+.viewport-overview__header strong {
+  color: #454c56;
+  font-weight: 650;
+}
+
+.viewport-overview-chart {
+  min-height: 125px;
 }
 
 .country-card {
@@ -1853,6 +1986,24 @@ a {
   .radar-heading__filters {
     flex-wrap: wrap;
     justify-content: flex-start;
+  }
+
+  .viewport-controls,
+  .viewport-card__header,
+  .viewport-overview__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .viewport-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .viewport-overview__header {
+    gap: 4px;
+    margin-left: 0;
   }
 
   .metrics,

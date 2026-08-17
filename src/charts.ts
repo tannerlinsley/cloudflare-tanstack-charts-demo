@@ -1,5 +1,8 @@
 import countriesAtlasJson from 'world-atlas/countries-110m.json'
 import { areaY, createMark, defineChart, lineY } from '@tanstack/charts'
+import { brushX } from '@tanstack/charts/interaction/brush'
+import { controlledSignal } from '@tanstack/charts/interaction/signal'
+import { zoomX } from '@tanstack/charts/interaction/zoom'
 import { decorative } from '@tanstack/charts/mark/decorative'
 import { geoShape } from '@tanstack/charts/geo'
 import { pie, polar, radialArc } from '@tanstack/charts/polar'
@@ -8,6 +11,14 @@ import { geoOrthographic } from 'd3-geo'
 import { scaleLinear, scaleOrdinal, scaleQuantize, scaleUtc } from 'd3-scale'
 import { feature } from 'topojson-client'
 import type { ExtendedFeature, GeoGeometryObjects } from 'd3-geo'
+import type {
+  BrushRange,
+  BrushXChange,
+} from '@tanstack/charts/interaction/brush'
+import type {
+  ZoomXChange,
+  ZoomXWindow,
+} from '@tanstack/charts/interaction/zoom'
 import type { SceneNode } from '@tanstack/charts'
 
 export interface MetricPoint {
@@ -44,6 +55,8 @@ export interface RadarSeriesVisibility {
   readonly http: boolean
   readonly previous: boolean
 }
+
+export type TrafficViewportWindow = ZoomXWindow<Date>
 
 const dashboardBlue = '#0051c3'
 const radarBlue = '#0055b8'
@@ -120,6 +133,34 @@ export const threatSeries = makeSeries(
   5_400,
   0.18,
 )
+
+const viewportStart = Date.UTC(2026, 7, 5, 12)
+const viewportStep = 5 * 60 * 1000
+
+export const viewportTrafficRows: readonly MetricPoint[] = Array.from(
+  { length: 7 * 24 * 12 + 1 },
+  (_, index) => {
+    const hour = index / 12
+    const daily = Math.sin((hour / 24) * Math.PI * 2 - 1.1) * 780_000
+    const shortCycle = Math.sin(index / 8.4) * 220_000
+    const jitter = Math.cos(index / 2.7) * 88_000
+    const incident = Math.exp(-Math.pow((hour - 141.5) / 2.2, 2)) * 2_650_000
+    return {
+      time: new Date(viewportStart + index * viewportStep),
+      value: Math.round(5_900_000 + daily + shortCycle + jitter + incident),
+    }
+  },
+)
+
+export const viewportFullExtent = [
+  viewportTrafficRows[0]!.time,
+  viewportTrafficRows[viewportTrafficRows.length - 1]!.time,
+] as const
+
+export const viewportInitialWindow: TrafficViewportWindow = {
+  start: new Date(Date.UTC(2026, 7, 11, 6)),
+  end: new Date(Date.UTC(2026, 7, 11, 12)),
+}
 
 export const topCountries = [
   { label: 'United States', value: 38.2, requests: '69.7M' },
@@ -234,6 +275,127 @@ export function dashboardTrafficDefinition({
       },
     },
   )
+}
+
+export function viewportTrafficDefinition(
+  window: TrafficViewportWindow,
+  onChange: (window: TrafficViewportWindow, reason: ZoomXChange<Date>) => void,
+  onActiveChange?: (active: boolean) => void,
+) {
+  const rows = rowsForViewport(viewportTrafficRows, window)
+  const yDomain = paddedValueDomain(rows)
+
+  return defineChart({
+    marks: [
+      lineY(rows, {
+        id: 'viewport-requests',
+        x: 'time',
+        y: 'value',
+        stroke: dashboardBlue,
+        strokeWidth: 2,
+      }),
+    ],
+    x: {
+      scale: scaleUtc().domain([window.start, window.end]),
+      axis: {
+        ticks: { count: 7, format: viewportAxisFormat },
+        tickLabels: { thin: { minGap: 8, priority: 'ends' } },
+      },
+    },
+    y: {
+      scale: scaleLinear().domain(yDomain),
+      nice: 4,
+      grid: true,
+      axis: { ticks: { count: 5, format: compact } },
+    },
+    controls: [
+      zoomX({
+        id: 'request-viewport',
+        window: controlledSignal<TrafficViewportWindow, ZoomXChange<Date>>(
+          window,
+          (next, { reason }) => onChange(next, reason),
+        ),
+        extent: viewportFullExtent,
+        scaleExtent: [1, 168],
+        ariaLabel: 'Request traffic viewport',
+        ariaDescription:
+          'Drag to pan. Scroll to zoom after focusing the chart. Use arrow keys to pan, plus and minus to zoom, and Home to reset.',
+        format: viewportControlFormat,
+        onActiveChange,
+      }),
+    ],
+    focus: false,
+    keyboard: false,
+    focusRing: false,
+    svgAnimation: false,
+    margin: { top: 16, right: 16, bottom: 30, left: 58 },
+  })
+}
+
+export function viewportScrubberDefinition(
+  window: TrafficViewportWindow,
+  onChange: (window: BrushRange<Date>, reason: BrushXChange<Date>) => void,
+) {
+  return defineChart({
+    marks: [
+      decorative(
+        areaY(viewportTrafficRows, {
+          id: 'viewport-overview-area',
+          x: 'time',
+          y: 'value',
+          fill: dashboardBlue,
+          fillOpacity: 0.12,
+        }),
+      ),
+      lineY(viewportTrafficRows, {
+        id: 'viewport-overview-line',
+        x: 'time',
+        y: 'value',
+        stroke: dashboardBlue,
+        strokeWidth: 1.2,
+      }),
+    ],
+    x: {
+      scale: scaleUtc().domain(viewportFullExtent),
+      axis: {
+        ticks: { count: 7, format: viewportOverviewFormat },
+        tickLabels: { thin: { minGap: 6, priority: 'ends' } },
+      },
+    },
+    y: {
+      scale: scaleLinear().domain([
+        0,
+        Math.max(...viewportTrafficRows.map((row) => row.value)) * 1.04,
+      ]),
+      axis: false,
+    },
+    controls: [
+      brushX({
+        id: 'request-scrubber',
+        range: controlledSignal<BrushRange<Date>, BrushXChange<Date>>(
+          window,
+          (next, { reason }) => onChange(next, reason),
+        ),
+        keyboard: false,
+        ariaLabel: 'Visible request range',
+        startAriaLabel: 'Visible range start',
+        endAriaLabel: 'Visible range end',
+        format: viewportControlFormat,
+        handleSize: 20,
+        selectionStyle: {
+          fill: dashboardBlue,
+          fillOpacity: 0.14,
+          stroke: dashboardBlue,
+          strokeWidth: 1.5,
+        },
+      }),
+    ],
+    focus: false,
+    keyboard: false,
+    focusRing: false,
+    svgAnimation: false,
+    margin: { top: 5, right: 16, bottom: 25, left: 58 },
+  })
 }
 
 export const countryGlobeDefinition = defineChart(
@@ -499,6 +661,29 @@ function makeSeries(
   }))
 }
 
+function rowsForViewport(
+  rows: readonly MetricPoint[],
+  window: TrafficViewportWindow,
+) {
+  const start = window.start.getTime()
+  const end = window.end.getTime()
+  const first = rows.findIndex((row) => row.time.getTime() >= start)
+  if (first < 0) return rows.slice(-2)
+  let last = first
+  while (last + 1 < rows.length && rows[last + 1]!.time.getTime() <= end) {
+    last += 1
+  }
+  return rows.slice(Math.max(0, first - 1), Math.min(rows.length, last + 2))
+}
+
+function paddedValueDomain(rows: readonly MetricPoint[]) {
+  const values = rows.map((row) => row.value)
+  const minimum = Math.min(...values)
+  const maximum = Math.max(...values)
+  const padding = Math.max(1, (maximum - minimum) * 0.12)
+  return [minimum - padding, maximum + padding] as const
+}
+
 function intervalMinutes(interval: DashboardInterval, days: number) {
   if (interval === '5 minutes') return 5
   if (interval === '15 minutes') return 15
@@ -521,6 +706,30 @@ const hourFormat = (value: Date | number) =>
   }).format(value)
 
 const fullTimeFormat = (value: Date | number) =>
+  new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  }).format(value)
+
+const viewportAxisFormat = (value: Date | number) =>
+  new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    timeZone: 'UTC',
+  }).format(value)
+
+const viewportOverviewFormat = (value: Date | number) =>
+  new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(value)
+
+const viewportControlFormat = (value: Date) =>
   new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
